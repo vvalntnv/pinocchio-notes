@@ -1,17 +1,15 @@
-import { InitializeAccountArgs } from "@/types/initialize";
+import { UpdateNote } from "@/types/update";
 import {
   Codec,
   fixCodecSize,
   getStructCodec,
-  getU64Codec,
   getU8Codec,
   getUtf8Codec,
 } from "@solana/kit";
 import { checkContentLength, wrapEncoderWithCheck } from "./utils";
 
-const _codec: Codec<InitializeAccountArgs> = getStructCodec([
-  ["discriminator", fixCodecSize(getU8Codec(), 8)],
-  ["noteId", getU64Codec()],
+const _codec: Codec<UpdateNote> = getStructCodec([
+  ["discriminator", getU8Codec()],
   ["content", fixCodecSize(getUtf8Codec(), 128)],
 ]);
 

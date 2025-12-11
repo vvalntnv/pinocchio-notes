@@ -2,7 +2,7 @@ use crate::state::NoteState;
 use crate::utils::next_account_info;
 use bytemuck::{Pod, Zeroable};
 use pinocchio::{
-    ProgramResult, account_info::AccountInfo, log, msg, program_error::ProgramError, pubkey::Pubkey,
+    ProgramResult, account_info::AccountInfo, log, program_error::ProgramError, pubkey::Pubkey,
 };
 
 pub fn process_initialize(

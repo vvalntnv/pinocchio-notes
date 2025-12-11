@@ -62,6 +62,7 @@ export async function initializeAccount(
 
   const notesAccount = await client.rpc.getAccountInfo(noteAddress).send();
 
+  const decodedData = notesAccount
   console.log("notes Account ");
 
   return getSignatureFromTransaction(transaction);

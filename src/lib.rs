@@ -24,7 +24,7 @@ pub fn process_instruction(
         0 => instructions::initialize::process_initialize(program_id, accounts, instruction_data),
         1 => {
             msg!("Updating them nutz");
-            Ok(())
+            instructions::update::process_update(program_id, accounts, instruction_data)
         }
         _ => return Err(ProgramError::InvalidInstructionData),
     }
