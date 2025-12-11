@@ -1,7 +1,8 @@
 import { createClient } from "./client";
 import createNotesAccount from "./scripts/createNotesAccount";
-import { INITIALIZE_INSTRUCTION } from "./constants";
 import { initializeAccount } from "./instructions/initializeNote";
+import { codec } from "./codecs/notesCodec";
+import { assertAccountExists, fetchEncodedAccount } from "@solana/kit";
 
 checkProgram();
 
@@ -9,16 +10,10 @@ async function checkProgram() {
   const client = await createClient();
 
   const notesAccountAddress = await createNotesAccount();
-  console.log("The address of the note", notesAccountAddress.toString());
-
-  const accountInfo = await client.rpc
-    .getAccountInfo(notesAccountAddress)
-    .send();
-
-  console.log("owner: ", accountInfo.value?.owner.toString());
 
   const transactionSig = await initializeAccount(
     {
+      discriminator: 0,
       noteId: BigInt(1),
       content: "somecontent",
     },
@@ -34,4 +29,14 @@ async function checkProgram() {
   const logs = txData.meta?.logMessages;
   console.log("Transction Signature: ", transactionSig);
   console.log("Logs obtained", logs);
+
+  const accountData = await fetchEncodedAccount(
+    client.rpc,
+    notesAccountAddress,
+  );
+  assertAccountExists(accountData);
+
+  const noteData = codec.decode(accountData.data);
+  console.log("Author", noteData.author.toString());
+  console.log("the data", noteData);
 }

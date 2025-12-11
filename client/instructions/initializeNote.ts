@@ -24,7 +24,6 @@ export async function initializeAccount(
   const client = await createClient();
   const encodedData = codec.encode(args);
 
-  console.log("LENGTH: ", encodedData.length);
   const instruction: Instruction = {
     programAddress: PROGRAM_ADDRESS,
     accounts: [
@@ -60,6 +59,10 @@ export async function initializeAccount(
   await client.sendAndConfirmTransaction(transaction, {
     commitment: "confirmed",
   });
+
+  const notesAccount = await client.rpc.getAccountInfo(noteAddress).send();
+
+  console.log("notes Account ");
 
   return getSignatureFromTransaction(transaction);
 }

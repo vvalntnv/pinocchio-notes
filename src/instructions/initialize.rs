@@ -10,10 +10,6 @@ pub fn process_initialize(
     accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
-    // 1. Account Iterator
-    // In raw Solana, accounts come in a specific order. You must document this!
-    // [0] Note Account (must be writable, signer checks depend on your logic, usually signed by system program on creation)
-    // [1] User/Payer (must be signer)
     let account_info_iter = &mut accounts.iter();
     let note_account = next_account_info(account_info_iter)?;
     let user_account = next_account_info(account_info_iter)?;
@@ -26,11 +22,6 @@ pub fn process_initialize(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    log::sol_log(&format!(
-        "The len of data is: {}\nAnd the len of InitializeArgs should be: {}",
-        data.len(),
-        size_of::<InitializeArgs>()
-    ));
     // 3. Zero-Copy Instruction Data
     // We cast the raw slice `data` into our struct `InitializeArgs`.
     // If the length doesn't match `sizeof(InitializeArgs)`, this fails safely.
@@ -39,35 +30,20 @@ pub fn process_initialize(
         ProgramError::InvalidInstructionData
     })?;
 
-    // 4. Zero-Copy Account Data (The Magic)
-    // We get a mutable reference to the account's internal byte array.
-    // Note: Pinocchio handles the RefCell for us usually, but we need to match the API.
-    // Standard approach:
-
-    // Safety check: Does the account have enough space?
-    // NoteState size = 8 (u64) + 32 (pubkey) + 8 (u64) + 128 (content) = 176 bytes
+    // Zero-Copy Account Data (The Magic)
     if note_account.data_len() < std::mem::size_of::<NoteState>() {
         return Err(ProgramError::AccountDataTooSmall);
     }
 
-    msg!("tuka li be bate?");
-    // We borrow the data mutably.
-    // In Pinocchio/Solana, this is an unsafe-like operation wrapped in a RefCell.
     let mut account_data = note_account.try_borrow_mut_data()?;
 
-    // We cast the raw bytes of the account into our `NoteState` struct.
     let state = bytemuck::try_from_bytes_mut::<NoteState>(&mut account_data)
         .map_err(|_| ProgramError::InvalidAccountData)?;
 
-    // 5. Write logic
-    // Idk if this will fail because we have not set the owner of this account to be the
-    // program_id of our program
     state.discriminator = 0xBADF00D; // Just a magic number to verify type later
     state.author = *user_account.key(); // Copy the pubkey bytes
     state.id = args.id;
     state.content = args.content; // Copy the array (fast memcpy)
-
-    msg!(&format!("Note Initialized: ID {}", args.id));
 
     Ok(())
 }
