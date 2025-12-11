@@ -10,21 +10,22 @@ use pinocchio::{
 entrypoint!(process_instruction);
 
 pub fn process_instruction(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
     msg!("Hello from my program!");
 
-    let (discriminator, _) = instruction_data
-        .split_first()
+    let discriminator = instruction_data
+        .get(0)
         .ok_or(ProgramError::InvalidInstructionData)?;
 
     match discriminator {
-        0 => msg!("Initializing theze nuts"),
-        1 => msg!("Updating them nutz"),
+        0 => instructions::initialize::process_initialize(program_id, accounts, instruction_data),
+        1 => {
+            msg!("Updating them nutz");
+            Ok(())
+        }
         _ => return Err(ProgramError::InvalidInstructionData),
-    };
-
-    Ok(())
+    }
 }

@@ -1,60 +1,37 @@
 import { createClient } from "./client";
-import {
-  address,
-  appendTransactionMessageInstruction,
-  assertIsSendableTransaction,
-  assertIsTransactionWithBlockhashLifetime,
-  createTransactionMessage,
-  getSignatureFromTransaction,
-  pipe,
-  setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash,
-  signTransactionMessageWithSigners,
-  type Instruction,
-} from "@solana/kit";
+import createNotesAccount from "./scripts/createNotesAccount";
+import { INITIALIZE_INSTRUCTION } from "./constants";
+import { initializeAccount } from "./instructions/initializeNote";
 
 checkProgram();
 
 async function checkProgram() {
   const client = await createClient();
-  const programAddress = address("moq19rQqv4wykNzPG4k45ofyoxuHTfPqqCqPFGJQaUz");
-  const instruction: Instruction = {
-    programAddress,
-    accounts: [],
-    data: new Uint8Array([1]),
-  };
-  console.log("Wallet Address:", client.wallet.address);
-  console.log("Address Length:", client.wallet.address?.length);
 
-  const { value: latestBlockhash } = await client.rpc
-    .getLatestBlockhash()
+  const notesAccountAddress = await createNotesAccount();
+  console.log("The address of the note", notesAccountAddress.toString());
+
+  const accountInfo = await client.rpc
+    .getAccountInfo(notesAccountAddress)
     .send();
 
-  const transactionMessage = pipe(
-    createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayerSigner(client.wallet, tx),
-    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-    (tx) => appendTransactionMessageInstruction(instruction, tx),
+  console.log("owner: ", accountInfo.value?.owner.toString());
+
+  const transactionSig = await initializeAccount(
+    {
+      noteId: BigInt(1),
+      content: "somecontent",
+    },
+    notesAccountAddress,
   );
 
-  const transaction =
-    await signTransactionMessageWithSigners(transactionMessage);
-
-  assertIsSendableTransaction(transaction);
-  assertIsTransactionWithBlockhashLifetime(transaction);
-
-  await client.sendAndConfirmTransaction(transaction, {
-    commitment: "confirmed",
-  });
-
-  const sig = getSignatureFromTransaction(transaction);
-  const txData = await client.rpc.getTransaction(sig).send();
+  const txData = await client.rpc.getTransaction(transactionSig).send();
 
   if (txData === null) {
     throw new Error("Transaction Cannot be null bro");
   }
 
   const logs = txData.meta?.logMessages;
-  console.log("Transction Signature: ", sig);
+  console.log("Transction Signature: ", transactionSig);
   console.log("Logs obtained", logs);
 }

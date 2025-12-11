@@ -2,7 +2,7 @@ use crate::state::NoteState;
 use crate::utils::next_account_info;
 use bytemuck::{Pod, Zeroable};
 use pinocchio::{
-    ProgramResult, account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey,
+    ProgramResult, account_info::AccountInfo, log, msg, program_error::ProgramError, pubkey::Pubkey,
 };
 
 pub fn process_initialize(
@@ -18,25 +18,26 @@ pub fn process_initialize(
     let note_account = next_account_info(account_info_iter)?;
     let user_account = next_account_info(account_info_iter)?;
 
-    // 2. Security Checks (The Anchor "Constraints")
-
-    // Check 1: Is the user a signer?
     if !user_account.is_signer() {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    // Check 2: Is the note account owned by THIS program?
-    // If we are initializing, the account should have been created by the client
-    // and assigned to this program ID immediately before this instruction.
     if note_account.owner() != program_id {
         return Err(ProgramError::IncorrectProgramId);
     }
 
+    log::sol_log(&format!(
+        "The len of data is: {}\nAnd the len of InitializeArgs should be: {}",
+        data.len(),
+        size_of::<InitializeArgs>()
+    ));
     // 3. Zero-Copy Instruction Data
     // We cast the raw slice `data` into our struct `InitializeArgs`.
     // If the length doesn't match `sizeof(InitializeArgs)`, this fails safely.
-    let args = bytemuck::try_from_bytes::<InitializeArgs>(data)
-        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    let args = bytemuck::try_from_bytes::<InitializeArgs>(data).map_err(|error| {
+        log::sol_log(&error.to_string());
+        ProgramError::InvalidInstructionData
+    })?;
 
     // 4. Zero-Copy Account Data (The Magic)
     // We get a mutable reference to the account's internal byte array.
@@ -49,6 +50,7 @@ pub fn process_initialize(
         return Err(ProgramError::AccountDataTooSmall);
     }
 
+    msg!("tuka li be bate?");
     // We borrow the data mutably.
     // In Pinocchio/Solana, this is an unsafe-like operation wrapped in a RefCell.
     let mut account_data = note_account.try_borrow_mut_data()?;
@@ -58,6 +60,8 @@ pub fn process_initialize(
         .map_err(|_| ProgramError::InvalidAccountData)?;
 
     // 5. Write logic
+    // Idk if this will fail because we have not set the owner of this account to be the
+    // program_id of our program
     state.discriminator = 0xBADF00D; // Just a magic number to verify type later
     state.author = *user_account.key(); // Copy the pubkey bytes
     state.id = args.id;
@@ -71,6 +75,7 @@ pub fn process_initialize(
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub struct InitializeArgs {
+    pub discriminator: u64,
     pub id: u64,
     pub content: [u8; 128],
 }

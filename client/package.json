@@ -18,6 +18,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@solana-program/system": "^0.10.0",
     "@solana/kit": "^5.0.0",
     "@solana/programs": "^5.0.0"
   }
