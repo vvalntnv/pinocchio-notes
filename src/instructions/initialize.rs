@@ -2,7 +2,7 @@ use crate::state::NoteState;
 use crate::utils::next_account_info;
 use bytemuck::{Pod, Zeroable};
 use pinocchio::{
-    ProgramResult, account_info::AccountInfo, log, program_error::ProgramError, pubkey::Pubkey,
+    ProgramResult, account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey,
 };
 
 pub fn process_initialize(
@@ -25,10 +25,8 @@ pub fn process_initialize(
     // 3. Zero-Copy Instruction Data
     // We cast the raw slice `data` into our struct `InitializeArgs`.
     // If the length doesn't match `sizeof(InitializeArgs)`, this fails safely.
-    let args = bytemuck::try_from_bytes::<InitializeArgs>(data).map_err(|error| {
-        log::sol_log(&error.to_string());
-        ProgramError::InvalidInstructionData
-    })?;
+    let args = bytemuck::try_from_bytes::<InitializeArgs>(data)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
 
     // Zero-Copy Account Data (The Magic)
     if note_account.data_len() < std::mem::size_of::<NoteState>() {

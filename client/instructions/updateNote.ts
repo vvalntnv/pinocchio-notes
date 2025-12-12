@@ -2,6 +2,7 @@ import { createClient } from "@/client";
 import { codec } from "@/codecs/updateNotesCodec";
 import { PROGRAM_ADDRESS } from "@/constants";
 import { UpdateNote } from "@/types/update";
+import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import {
   AccountRole,
   Address,
@@ -17,7 +18,11 @@ import {
   type Instruction,
 } from "@solana/kit";
 
-export async function updateNote(noteAddress: Address, updateData: UpdateNote) {
+export async function updateNote(
+  noteAddress: Address,
+  treasuryAddress: Address,
+  updateData: UpdateNote,
+) {
   const client = await createClient();
   const dataEncoded = codec.encode(updateData);
 
@@ -30,7 +35,15 @@ export async function updateNote(noteAddress: Address, updateData: UpdateNote) {
       },
       {
         address: client.wallet.address,
-        role: AccountRole.READONLY_SIGNER,
+        role: AccountRole.WRITABLE_SIGNER,
+      },
+      {
+        address: SYSTEM_PROGRAM_ADDRESS,
+        role: AccountRole.READONLY,
+      },
+      {
+        address: treasuryAddress,
+        role: AccountRole.WRITABLE,
       },
     ],
     data: dataEncoded,

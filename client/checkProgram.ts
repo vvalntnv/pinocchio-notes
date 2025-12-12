@@ -4,6 +4,7 @@ import { initializeAccount } from "./instructions/initializeNote";
 import { codec } from "./codecs/notesCodec";
 import { assertAccountExists, fetchEncodedAccount } from "@solana/kit";
 import { updateNote } from "./instructions/updateNote";
+import { createTreasuryAccount } from "./scripts/createTreasuryAccount";
 
 checkProgram();
 
@@ -11,6 +12,7 @@ async function checkProgram() {
   const client = await createClient();
 
   const notesAccountAddress = await createNotesAccount();
+  const treasuryAccountAddress = await createTreasuryAccount();
 
   // Improvement: Disciminator is unnecessary here
   // we know initialize => 0
@@ -30,26 +32,16 @@ async function checkProgram() {
     throw new Error("Transaction Cannot be null bro");
   }
 
-  const logs = txData.meta?.logMessages;
-  console.log("Transction Signature: ", transactionSig);
-  console.log("Logs obtained", logs);
-
   const accountData = await fetchEncodedAccount(
     client.rpc,
     notesAccountAddress,
   );
   assertAccountExists(accountData);
 
-  const noteData = codec.decode(accountData.data);
-  console.log("Author", noteData.author.toString());
-  console.log("the data", noteData);
-
-  const updateTxSig = await updateNote(notesAccountAddress, {
+  await updateNote(notesAccountAddress, treasuryAccountAddress, {
     discriminator: 1,
     content: "this is the new text",
   });
-
-  console.log("Transction Signature: ", updateTxSig);
 
   const updatedAccountData = await fetchEncodedAccount(
     client.rpc,
@@ -57,7 +49,21 @@ async function checkProgram() {
   );
   assertAccountExists(updatedAccountData);
 
+  const treasuryAccountData = await fetchEncodedAccount(
+    client.rpc,
+    treasuryAccountAddress,
+  );
+  assertAccountExists(treasuryAccountData);
+
+  const exemptLamports = await client.rpc
+    .getMinimumBalanceForRentExemption(BigInt(0))
+    .send();
+
   const updatedNoteData = codec.decode(updatedAccountData.data);
   console.log("Author", updatedNoteData.author.toString());
   console.log("updatedData", updatedNoteData);
+  console.log(
+    "Treasury Account Balance",
+    treasuryAccountData.lamports - exemptLamports,
+  );
 }
